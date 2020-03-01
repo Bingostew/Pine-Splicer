@@ -19,7 +19,7 @@ public class Player_Controller : MonoBehaviour
 
     private static float acceleration, maxSpeed;
     private static float movementSpeed;
-
+    
     public static float speedModifier = 1;
 
     private const int kMaxSpeedDivisor = 20;
