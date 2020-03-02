@@ -31,11 +31,12 @@ public class Throwable : MonoBehaviour
         flightMode = throwableObject.FlightMode.ToString();
         #endregion
         Event_Controller.attackEvent += () => ThrowObject();
-        AttributeInstance.slownessInstance(3, 2f);
+        AttributeInstance.slownessInstance(3, 3f);
     }
 
     public void ThrowObject()
     {
+   
         weapon.transform.SetParent(null);
         if (!weapon.GetComponent<Object_Motion>())
         {

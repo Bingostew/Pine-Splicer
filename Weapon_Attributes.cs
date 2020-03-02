@@ -5,7 +5,7 @@ using System;
 
 namespace WeaponAttributes
 {
-    public class AttributeInstance : MonoBehaviour
+    public class AttributeInstance
     {
         public static SlownessAttributes slownessInstance(float slownessLength, float slownessPct)
         {

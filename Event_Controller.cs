@@ -15,47 +15,15 @@ public class Event_Controller : MonoBehaviour
     public static event PlayerModeDelegate statChangeEvent;
     public static bool attacking, jumping, crawling, walking, running, idling, statChanging;
 
-    /*
-    public static void instantAttack()
-    {
-        if (attacking) attackEvent?.Invoke();
-    }
-
-    public static void instantJump()
-    {
-        if (jumping) jumpEvent?.Invoke();
-    }
-
-    public static void instantCrawl()
-    {
-        if (crawling) crawlEvent?.Invoke();
-    }
-
-    public static void instantWalk(Action walkAction)
-    {
-        walkEvent += () => walkAction();
-        walkEvent?.Invoke(); 
-        walkEvent -= () => walkAction();
-    }
-
-    public static void instantRun()
-    {
-        if (running) runEvent?.Invoke();
-    }
-
-    public static void instantIdle()
-    {
-        if (idling) idleEvent?.Invoke();
-    }
-    */
     void Update()
     {
+        print(attacking);
         if (attacking) { attackEvent?.Invoke(); }
-        if (jumping) { jumpEvent?.Invoke(); }
+        if (jumping) { jumpEvent?.Invoke(); print("jumping"); }
         if (crawling) { crawlEvent?.Invoke(); }
-        if (walking) { walkEvent?.Invoke(); }
-        if (running) { runEvent?.Invoke(); }
+        if (walking) { walkEvent?.Invoke(); print("walking"); }
+        if (running) { runEvent?.Invoke(); print("running"); }
         if (idling) { idleEvent?.Invoke(); }
-         statChangeEvent?.Invoke();
+        statChangeEvent?.Invoke();
     }
 }

@@ -59,7 +59,7 @@ public class Player_Controller : MonoBehaviour
 
         Event_Controller.crawling = !Event_Controller.jumping && Input.GetKey(KeyCode.C) ? true : false;
 
-        Event_Controller.walking = !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+        Event_Controller.walking = !Event_Controller.jumping && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             && (Input.GetKey(KeyCode.W)
             || Input.GetKey(KeyCode.A)
             || Input.GetKey(KeyCode.D)
@@ -73,9 +73,7 @@ public class Player_Controller : MonoBehaviour
 
         Event_Controller.idling = !Input.anyKey ? true : false;
 
-        if (Input.GetKeyDown(KeyCode.Space) && !readyToJump)
-        {
-            Event_Controller.jumping = true;
+        if (Input.GetKeyDown(KeyCode.Space) && !readyToJump) {   
             instantJumpPlayer();
         }
     }
@@ -84,11 +82,13 @@ public class Player_Controller : MonoBehaviour
     private void OnCollisionStay(Collision collision)
     {
         readyToJump = collision.gameObject.layer == 8 ? false : readyToJump;
+        Event_Controller.jumping = false;
     }
 
     private void OnCollisionExit(Collision collision)
     {
-        readyToJump = collision.gameObject.layer == 8 ? true : readyToJump;
+    Event_Controller.jumping = true;
+    readyToJump = collision.gameObject.layer == 8 ? true : readyToJump;
     }
     #endregion // Trigger to toggle boolean for jumping
 
