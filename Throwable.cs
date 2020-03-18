@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using WeaponAttributes;
+using StatEffect;
 /*
  * Top Class for weapons: Throwables, Shootables, and Melees
  * Use as template for all throwables.
@@ -19,6 +19,8 @@ public class Throwable : MonoBehaviour
     private float damage, force, time;
     private int[] ddoInc, ddoPer;
     private string flightMode;
+    private string[] weaponAttribute;
+    private int[] weaponAttributeIndex;
 
     private void OnEnable()
     {
@@ -29,14 +31,26 @@ public class Throwable : MonoBehaviour
         ddoInc = throwableObject.ThrowableDdoInfo.ThrowableDdoIncrements;
         ddoPer = throwableObject.ThrowableDdoInfo.ThrowableDdoPercentage;
         flightMode = throwableObject.FlightMode.ToString();
+        weaponAttribute = throwableObject.attributes;
+        weaponAttributeIndex = new int[weaponAttribute.Length];
         #endregion
-        Event_Controller.attackEvent += () => ThrowObject();
-        AttributeInstance.slownessInstance(3, 3f);
+        Event_Controller.attackEvent += ThrowObject;
+        AddAttribute();
+    }
+
+    private void Start()
+    {
+        Event_Controller.addAttackStream(BeginAttributes);
+    }
+
+    //start the attribute of the weapons
+    public void BeginAttributes()
+    {
+        AttributeInstance.beginModifier(ref Player_Controller.speedModifier, weaponAttributeIndex[0]);
     }
 
     public void ThrowObject()
     {
-   
         weapon.transform.SetParent(null);
         if (!weapon.GetComponent<Object_Motion>())
         {
@@ -45,9 +59,15 @@ public class Throwable : MonoBehaviour
     }
 
     // Any addition attributes special to a particular weapon
-    private void AddAttribute (Action a)
+    private void AddAttribute ()
     {
-        
+        for (int i = 0; i < weaponAttribute.Length; i ++)
+        {
+            switch (weaponAttribute[i])
+            {
+                case "s": weaponAttributeIndex[i] = (AttributeInstance.moveSpeedInstance(1,10f)); break;
+            }
+        }
     }
 
     #region debugger

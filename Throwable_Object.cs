@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using StatEffect;
 
 [ExecuteInEditMode]
 [CreateAssetMenu(fileName = "Throwable Object SO", menuName = "Scriptable Weapon(Throwable)")]
@@ -18,8 +19,8 @@ public class Throwable_Object : ScriptableObject
     public float ThrowableDamage;
     public float ThrowableForce;
     public float ThrowableTime;
-    public char[] AttributeInitial;
     public ThrowableDdoInfo ThrowableDdoInfo;
+    public string[] attributes;
 }
 
 [Serializable]

@@ -19,7 +19,7 @@ public class Player_Controller : MonoBehaviour
 
     private static float acceleration, maxSpeed;
     private static float movementSpeed;
-    
+
     public static float speedModifier = 1;
 
     private const int kMaxSpeedDivisor = 20;
@@ -155,7 +155,7 @@ public class Player_Controller : MonoBehaviour
         movePlayer();
         rotatePlayer();
         // modifier
-        float modMovementSpeed = movementSpeed * speedModifier;
+        float modMovementSpeed = movementSpeed * speedModifier; print(speedModifier);
         // move player
         rawVelocity = (moveHorizontal + moveVertical).normalized * modMovementSpeed;
         playerRB.MovePosition(playerRB.position + rawVelocity);
@@ -182,13 +182,6 @@ public class Player_Controller : MonoBehaviour
         movementSpeed = 0;
     }
 
-    /// <summary>
-    /// Returns in order: [acceleration, max speed, movement speed]
-    /// </summary>
-    public static float[] getPlayerData()
-    {
-        return new float[] { acceleration, maxSpeed, movementSpeed };
-    }
 
     private void FixedUpdate()
     {
