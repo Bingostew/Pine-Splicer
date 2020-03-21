@@ -8,11 +8,7 @@ public class Instant_Reference : MonoBehaviour
     public static GameObject playerReference;
 
     public static Camera mainCamera;
-    public static Vector3 playerCamStraightVec;
-    public static Vector3 playerPosition;
-    public static Ray playerCamStraightRay;
-    public static Vector3 rightHandPosition;
-    public static Vector3 hitPoint;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -20,27 +16,66 @@ public class Instant_Reference : MonoBehaviour
         mainCamera = playerReference.GetComponent<Player_Controller>().playerCamera;
     }
     // Update is called once per frame
-    void Update()
+
+
+    public static Vector3 getPlayerCamStraightVector()
     {
-        playerCamStraightVec = mainCamera.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 1));
-        playerCamStraightRay = new Ray(mainCamera.transform.position, playerCamStraightVec- mainCamera.transform.position);
-        playerPosition = playerReference.transform.position;
-        rightHandPosition = mainCamera.transform.GetChild(1).GetChild(0).position;
-        Debug.DrawRay(rightHandPosition, playerCamStraightVec - rightHandPosition);
+        return mainCamera.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 1));
     }
 
-    
+    public static Ray getPlayerCamStraightRay()
+    {
+        return new Ray(mainCamera.transform.position, getPlayerCamStraightVector() - mainCamera.transform.position);
+    }
+
+    public static Ray getPlayerStraightRay()
+    {
+        return new Ray(mainCamera.transform.position, 
+            new Vector3(getPlayerCamStraightVector().x - mainCamera.transform.position.x,
+                        0,
+                        getPlayerCamStraightVector().z - mainCamera.transform.position.z));
+    }
+
+    public static Ray getRightHandToHitRay(float range)
+    {
+        return new Ray(getRightHandPosition(), getHitPoint(range) - getRightHandPosition());
+    }
+
+    public static Ray getRightHandToHitRayParallel(float range, Vector3 position)
+    {
+        return new Ray(position, new Vector3(
+                                                            getHitPoint(range).x - getRightHandPosition().x,
+                                                            0,
+                                                            getHitPoint(range).z - getRightHandPosition().z));
+    }
+
+    public static Vector3 getRightHandToHitVector(float range)
+    {
+        return new Ray(getRightHandPosition(), getHitPoint(range) - getRightHandPosition()).GetPoint(range);
+    }
+
+    public static Vector3 getPlayerPosition()
+    {
+        return playerReference.transform.position;
+    }
+
+    public static Vector3 getRightHandPosition()
+    {
+        return mainCamera.transform.GetChild(1).GetChild(0).position;
+    }
+
+    //Retrieve the point hit by the straightray.
     public static Vector3 getHitPoint(float range){
-        LayerMask mask = LayerMask.GetMask("8");
+        LayerMask mask = LayerMask.GetMask("Terrain");
         RaycastHit hitPoint; // never instantiate a rayCastHit Object outside of the method scope
 
-        if (Physics.Raycast(playerCamStraightRay, out hitPoint, range, mask))
+        if (Physics.Raycast(getPlayerCamStraightRay(), out hitPoint, range,mask))
         {
-            return hitPoint.transform.position;
+            return hitPoint.point;
         }
         else
         {
-            return playerCamStraightRay.GetPoint(range);
+            return getPlayerCamStraightRay().GetPoint(range);
         }
     }
 }

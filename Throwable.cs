@@ -18,9 +18,10 @@ public class Throwable : MonoBehaviour
 
     private float damage, force, time;
     private int[] ddoInc, ddoPer;
-    private string flightMode;
-    private string[] weaponAttribute;
-    private int[] weaponAttributeIndex;
+    private Throwable_Object.MotionMode flightMode;
+    private string[] attributeList;
+    private Vector2[] attributeValues;
+    private int[] attributeIndex;
 
     private void OnEnable()
     {
@@ -30,11 +31,13 @@ public class Throwable : MonoBehaviour
         damage = throwableObject.ThrowableDamage;   force = throwableObject.ThrowableForce;     time = throwableObject.ThrowableTime;
         ddoInc = throwableObject.ThrowableDdoInfo.ThrowableDdoIncrements;
         ddoPer = throwableObject.ThrowableDdoInfo.ThrowableDdoPercentage;
-        flightMode = throwableObject.FlightMode.ToString();
-        weaponAttribute = throwableObject.attributes;
-        weaponAttributeIndex = new int[weaponAttribute.Length];
+        flightMode = throwableObject.FlightMode;
+        attributeList = throwableObject.ThrowableAttributes.ThrowableAttributeList;
+        attributeValues = throwableObject.ThrowableAttributes.ThrowableAttributeValues;
+        attributeIndex = new int[attributeList.Length];
         #endregion
-        Event_Controller.attackEvent += ThrowObject;
+        Event_Controller.addAttackStream(ThrowObject);
+        DebugStats();
         AddAttribute();
     }
 
@@ -46,26 +49,33 @@ public class Throwable : MonoBehaviour
     //start the attribute of the weapons
     public void BeginAttributes()
     {
-        AttributeInstance.beginModifier(ref Player_Controller.speedModifier, weaponAttributeIndex[0]);
+        AttributeInstance.beginModifier(ref Player_Controller.speedModifier, attributeIndex[0]);
     }
 
     public void ThrowObject()
     {
         weapon.transform.SetParent(null);
-        if (!weapon.GetComponent<Object_Motion>())
+    
+        switch (flightMode)
         {
-            weapon.AddComponent<Object_Motion>().setMotionInfo(flightMode, force, time);
+            case Throwable_Object.MotionMode.linear:
+                weapon.AddComponent<Object_Motion>().setLinearFlight(force, time);
+                break;
+            case Throwable_Object.MotionMode.quadratic:
+                weapon.AddComponent<Object_Motion>().setQuadraticFlight(force);
+                break;
         }
+        
     }
 
     // Any addition attributes special to a particular weapon
     private void AddAttribute ()
     {
-        for (int i = 0; i < weaponAttribute.Length; i ++)
+        for (int i = 0; i < attributeList.Length; i ++)
         {
-            switch (weaponAttribute[i])
+            switch (attributeList[i])
             {
-                case "s": weaponAttributeIndex[i] = (AttributeInstance.moveSpeedInstance(1,10f)); break;
+                case "s": attributeIndex[i] = AttributeInstance.moveSpeedInstance(attributeValues[i].x, attributeValues[i].y); break;
             }
         }
     }
@@ -76,6 +86,11 @@ public class Throwable : MonoBehaviour
         if(time == 0)
         {
             Debug.LogError("Object Motion Flight Time can not be 0", this);
+        }
+
+        if(attributeValues.Length != attributeList.Length)
+        {
+            Debug.LogError("Missing either values for attribute or extra values for attributes", this);
         }
     }
     #endregion
@@ -112,7 +127,6 @@ public class Throwable : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        DebugStats();
     }
 
     private void FixedUpdate()

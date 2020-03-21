@@ -20,7 +20,14 @@ public class Throwable_Object : ScriptableObject
     public float ThrowableForce;
     public float ThrowableTime;
     public ThrowableDdoInfo ThrowableDdoInfo;
-    public string[] attributes;
+    public ThrowableAttributes ThrowableAttributes;
+}
+
+[Serializable]
+public class ThrowableAttributes
+{
+    public string[] ThrowableAttributeList;
+    public Vector2[] ThrowableAttributeValues;
 }
 
 [Serializable]

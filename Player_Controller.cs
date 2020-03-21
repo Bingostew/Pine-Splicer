@@ -24,7 +24,7 @@ public class Player_Controller : MonoBehaviour
 
     private const int kMaxSpeedDivisor = 20;
     private const float kMaxHeadRotorLimit = 290;
-    private const float kMinHeadRotorLimit = 90;
+    private const float kMinHeadRotorLimit = 85;
 
     private int playerAttackNumber = -1;
     private bool readyToJump;
@@ -161,7 +161,7 @@ public class Player_Controller : MonoBehaviour
         playerRB.MovePosition(playerRB.position + rawVelocity);
         // rotate players
         headRotor.transform.Rotate(cameraRot);
-        playerRB.MoveRotation(playerRB.rotation * Quaternion.Euler(playerRot));
+        transform.Rotate(playerRot);
     }
 
     // preform functions while no keys are pressed
@@ -185,11 +185,11 @@ public class Player_Controller : MonoBehaviour
 
     private void FixedUpdate()
     {
-        playerFunction();
+        ConfigurePlayerMode();
     }
 
     private void Update()
     {
-        ConfigurePlayerMode(); 
+        playerFunction();
     }
 }
