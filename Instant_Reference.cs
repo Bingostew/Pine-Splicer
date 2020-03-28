@@ -6,6 +6,7 @@ public class Instant_Reference : MonoBehaviour
 {
     public GameObject r_playerReference;
     public static GameObject playerReference;
+    public static GameObject playerRightHand;
 
     public static Camera mainCamera;
 
@@ -14,14 +15,9 @@ public class Instant_Reference : MonoBehaviour
     {
         playerReference = r_playerReference;
         mainCamera = playerReference.GetComponent<Player_Controller>().playerCamera;
+        playerRightHand = mainCamera.transform.GetChild(1).gameObject;
     }
     // Update is called once per frame
-
-
-    public static Vector3 getPlayerCamStraightVector()
-    {
-        return mainCamera.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 1));
-    }
 
     public static Ray getPlayerCamStraightRay()
     {
@@ -54,6 +50,11 @@ public class Instant_Reference : MonoBehaviour
         return new Ray(getRightHandPosition(), getHitPoint(range) - getRightHandPosition()).GetPoint(range);
     }
 
+    public static Vector3 getPlayerCamStraightVector()
+    {
+        return mainCamera.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 1));
+    }
+
     public static Vector3 getPlayerPosition()
     {
         return playerReference.transform.position;
@@ -61,7 +62,7 @@ public class Instant_Reference : MonoBehaviour
 
     public static Vector3 getRightHandPosition()
     {
-        return mainCamera.transform.GetChild(1).GetChild(0).position;
+        return playerRightHand.transform.position;
     }
 
     //Retrieve the point hit by the straightray.

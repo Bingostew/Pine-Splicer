@@ -19,6 +19,8 @@ public class Throwable_Object : ScriptableObject
     public float ThrowableDamage;
     public float ThrowableForce;
     public float ThrowableTime;
+    public float ThrowableBlastRange;
+    public ParticleSystem ThrowableParticle;
     public ThrowableDdoInfo ThrowableDdoInfo;
     public ThrowableAttributes ThrowableAttributes;
 }
@@ -26,8 +28,8 @@ public class Throwable_Object : ScriptableObject
 [Serializable]
 public class ThrowableAttributes
 {
-    public string[] ThrowableAttributeList;
-    public Vector2[] ThrowableAttributeValues;
+    public char[] ThrowableAttributeList;
+    public Vector3[] ThrowableAttributeValues;
 }
 
 [Serializable]

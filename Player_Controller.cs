@@ -6,7 +6,7 @@ using UnityEngine;
 //TODO: FIX: 
         //-Throwable Scriptable
         //-Jitter Collider
-public class Player_Controller : MonoBehaviour
+public class Player_Controller : MonoBehaviour, ObjectHealth
 {
     [SerializeField]
     private float walkingAcceleration, runningAcceleration, jumpingAccerleration, crawlingAccerleration;
@@ -26,7 +26,6 @@ public class Player_Controller : MonoBehaviour
     private const float kMaxHeadRotorLimit = 290;
     private const float kMinHeadRotorLimit = 85;
 
-    private int playerAttackNumber = -1;
     private bool readyToJump;
     private Vector3 rawVelocity;
     private Rigidbody playerRB;
@@ -38,16 +37,22 @@ public class Player_Controller : MonoBehaviour
     private void Start()
     {
         Event_Controller.idleEvent += idlePlayer;
-
+        Event_Controller.addCrawlStream(instantCrawlPlayer);
         ConfigureSpeed();
-
     }
+
     private void Awake()
     {
         // setting player components
         playerRB = GetComponent<Rigidbody>();
         playerCamera = transform.GetChild(0).GetChild(0).GetChild(0).GetComponent<Camera>();
         headRotor = transform.GetChild(0);
+        SpawnHealth(100);
+    }
+
+    public void SpawnHealth(float health)
+    {
+        Health_Base.addEntityHealth(gameObject, health);
     }
 
     // set playerModeEnum to a mode
@@ -95,29 +100,30 @@ public class Player_Controller : MonoBehaviour
     // movement of forward, left, right, and backwards at walking and running speed.
     private void ConfigureSpeed()
     {
-        Event_Controller.jumpEvent += () =>
+        Event_Controller.addJumpStream(() =>
         {
             acceleration = jumpingAccerleration;
             maxSpeed = jumpingMaxSpeed / kMaxSpeedDivisor;
-        };
+        });
 
-        Event_Controller.runEvent += () =>
-         {
-             acceleration = runningAcceleration;
-             maxSpeed = runningMaxSpeed / kMaxSpeedDivisor;
-         };
+        Event_Controller.addRunStream(() =>
+        {
+            acceleration = runningAcceleration;
+            maxSpeed = runningMaxSpeed / kMaxSpeedDivisor;
+        });
 
-        Event_Controller.walkEvent +=() =>
+        Event_Controller.addWalkStream(() =>
         {
             acceleration = walkingAcceleration;
             maxSpeed = walkingMaxSpeed / kMaxSpeedDivisor;
-        };
+        });
 
-        Event_Controller.crawlEvent += () =>
+        Event_Controller.addCrawlStream(()=>
         {
             acceleration = crawlingAccerleration;
             maxSpeed = crawlingMaxSpeed / kMaxSpeedDivisor;
-        };
+        });
+
         // increase scale for optimization
     }
 
@@ -155,7 +161,7 @@ public class Player_Controller : MonoBehaviour
         movePlayer();
         rotatePlayer();
         // modifier
-        float modMovementSpeed = movementSpeed * speedModifier; print(speedModifier);
+        float modMovementSpeed = movementSpeed * speedModifier;
         // move player
         rawVelocity = (moveHorizontal + moveVertical).normalized * modMovementSpeed;
         playerRB.MovePosition(playerRB.position + rawVelocity);
@@ -182,6 +188,10 @@ public class Player_Controller : MonoBehaviour
         movementSpeed = 0;
     }
 
+    public void Death()
+    {
+        print("YOU DIED");
+    }
 
     private void FixedUpdate()
     {

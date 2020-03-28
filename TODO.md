@@ -1,3 +1,17 @@
+Progress Logs:
+3/25:
+Quadratic motion
+
+3/26:
+Enemy movement
+
+3/27: 
+Health system
+Debugging weapon attributes- constant health depletion
+
 TODO:
-1. Receive weapon attribute from scriptable object
-2. Create quadratic flight path for throwable object
+Health bar UI
+Enemy shoot
+Shootable script
+
+
