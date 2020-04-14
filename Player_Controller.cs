@@ -20,11 +20,12 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
     private static float acceleration, maxSpeed;
     private static float movementSpeed;
 
+    public static float playerHealth = 100;
     public static float speedModifier = 1;
 
     private const int kMaxSpeedDivisor = 20;
-    private const float kMaxHeadRotorLimit = 290;
-    private const float kMinHeadRotorLimit = 85;
+    private const float kMaxHeadRotorLimit = 90;
+    private const float kMinHeadRotorLimit = 270;
 
     private bool readyToJump;
     private Vector3 rawVelocity;
@@ -47,7 +48,7 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
         playerRB = GetComponent<Rigidbody>();
         playerCamera = transform.GetChild(0).GetChild(0).GetChild(0).GetComponent<Camera>();
         headRotor = transform.GetChild(0);
-        SpawnHealth(100);
+        SpawnHealth(playerHealth);
     }
 
     public void SpawnHealth(float health)
@@ -62,9 +63,12 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
 
         // see ColliderTrigger Region for "isJumping" boolean control.
 
+        Event_Controller.aiming = !Event_Controller.walking && !Event_Controller.running 
+            && !Event_Controller.jumping && Input.GetKey(KeyCode.LeftShift) ? true : false;
+
         Event_Controller.crawling = !Event_Controller.jumping && Input.GetKey(KeyCode.C) ? true : false;
 
-        Event_Controller.walking = !Event_Controller.jumping && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+        Event_Controller.walking = !Event_Controller.jumping && !Event_Controller.running
             && (Input.GetKey(KeyCode.W)
             || Input.GetKey(KeyCode.A)
             || Input.GetKey(KeyCode.D)
@@ -76,7 +80,8 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
             || Input.GetKey(KeyCode.D)
             || Input.GetKey(KeyCode.S)) ? true : false;
 
-        Event_Controller.idling = !Input.anyKey ? true : false;
+        Event_Controller.idling = !Event_Controller.aiming && !Event_Controller.walking
+            && !Event_Controller.running && !Event_Controller.crawling && !Event_Controller.jumping ? true : false ;
 
         if (Input.GetKeyDown(KeyCode.Space) && !readyToJump) {   
             instantJumpPlayer();
@@ -147,11 +152,11 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
         float _XRot = Input.GetAxis("Mouse Y");
         float _YRot = Input.GetAxis("Mouse X");
         // debugging player rotation limit
-        float headRotorZ = headRotor.transform.localEulerAngles.z;
+        float headRotorZ = Quaternion.ToEulerAngles(transform.rotation).x;
         cameraRot = headRotorZ < kMinHeadRotorLimit || headRotorZ > kMaxHeadRotorLimit 
-                             || (headRotorZ >= kMinHeadRotorLimit && headRotorZ < 180 && _XRot < 0) 
-                             || (headRotorZ <= kMaxHeadRotorLimit && headRotorZ > 180 &&  _XRot > 0)
-                            ? new Vector3(0, 0, _XRot) * xMouseSensitivity : Vector3.zero;
+                             || (headRotorZ >= kMinHeadRotorLimit && headRotorZ < 180 && _XRot > 0) 
+                             || (headRotorZ <= kMaxHeadRotorLimit && headRotorZ > 180 &&  _XRot < 0)
+                            ? new Vector3(-_XRot, 0, 0) * xMouseSensitivity : Vector3.zero;
         playerRot = new Vector3(0, _YRot, 0) * yMouseSensitivity;
     }
 
@@ -190,16 +195,18 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
 
     public void Death()
     {
-        print("YOU DIED");
+        transform.position = new Vector3(transform.position.x, transform.position.y + 100, transform.position.z);
+        Health_Base.addEntityHealth(gameObject, 100);
     }
 
     private void FixedUpdate()
     {
+      //  print("player health " + Health_Base.getEntityHeath(gameObject));
         ConfigurePlayerMode();
     }
 
     private void Update()
     {
-        playerFunction();
+        playerFunction(); 
     }
 }

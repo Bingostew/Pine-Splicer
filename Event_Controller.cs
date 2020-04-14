@@ -11,9 +11,9 @@ public class Event_Controller : MonoBehaviour
     private static List<PlayerModeDelegate> runModeStream = new List<PlayerModeDelegate>();
     private static List<PlayerModeDelegate> walkModeStream = new List<PlayerModeDelegate>();
     private static List<PlayerModeDelegate> crawlModeStream = new List<PlayerModeDelegate>();
-
-    public static List<PlayerModeDelegate[]> timeBasedStream = new List<PlayerModeDelegate[]>();
-    public static int timeBasedIndex;
+    private static List<PlayerModeDelegate> aimModeStream = new List<PlayerModeDelegate>();
+    private static List<PlayerModeDelegate> idleModeStream = new List<PlayerModeDelegate>();
+    private static List<PlayerModeDelegate> stateChangeStream = new List<PlayerModeDelegate>();
 
     public static event PlayerModeDelegate instantEvent;
     public static event PlayerModeDelegate attackEvent;
@@ -22,44 +22,52 @@ public class Event_Controller : MonoBehaviour
     public static event PlayerModeDelegate walkEvent;
     public static event PlayerModeDelegate runEvent;
     public static event PlayerModeDelegate idleEvent;
+    public static event PlayerModeDelegate aimEvent;
     public static event PlayerModeDelegate timeBasedEvent;
-    private static bool attackStreamReady, jumpStreamReady, walkStreamReady, runStreamReady, crawlStreamReady;
-    public static bool attacking, jumping, crawling, walking, running, idling, statChanging;
-
-    /// <summary>
-    /// instantly calls an event without update
-    /// </summary>
-    /// <param name="a"></param>
-    public static void QuickEvent(PlayerModeDelegate a)
-    {
-        instantEvent += a;
-        instantEvent?.Invoke();
-        instantEvent -= a;
-    }
+    private static bool attackStreamReady, jumpStreamReady, walkStreamReady, runStreamReady, crawlStreamReady, aimStreamReady, idleStreamReady;
+    public static bool attacking, jumping, crawling, walking, running, idling, aiming, statChanging;
 
     /// <summary>
     /// Event that updates for a given time
     /// </summary>
     /// <param name="endTimeEvent"> event that is called once after time is up</param>
     /// <param name="time">time for the event to update, in seconds</param>
-    public static void TimedEvent(PlayerModeDelegate endTimeEvent, PlayerModeDelegate constantTimeEvent, float time)
+    public static void TimedEvent(PlayerModeDelegate endTimeEvent, PlayerModeDelegate constantTimeEvent, float time, out TimeBased timeBasedClass)
     {
-        new TimeBased(time, endTimeEvent, constantTimeEvent);
+        TimeBased t = new TimeBased(time, endTimeEvent, constantTimeEvent);
+        timeBasedClass = t;
     }
 
+    public static void addIdleStream(PlayerModeDelegate a) { idleModeStream.Add(a); }
+    public static void addStateChangeStream(PlayerModeDelegate a) { stateChangeStream.Add(a); }
     public static void addAttackStream(PlayerModeDelegate a){attackModeStream.Add(a);}
     public static void addRunStream(PlayerModeDelegate a) { runModeStream.Add(a); }
     public static void addWalkStream(PlayerModeDelegate a) { walkModeStream.Add(a); }
     public static void addCrawlStream(PlayerModeDelegate a) { crawlModeStream.Add(a); }
     public static void addJumpStream(PlayerModeDelegate a) { jumpModeStream.Add(a); }
+    public static void addAimStream(PlayerModeDelegate a) { aimModeStream.Add(a); }
+    public static void removeAimStream(PlayerModeDelegate a) { aimModeStream.Remove(a); }
+    public static void removeAttackStream(PlayerModeDelegate a) { attackModeStream.Remove(a); }
+    public static void removeRunStream(PlayerModeDelegate a) { runModeStream.Remove(a); }
+    public static void removeWalkStream(PlayerModeDelegate a) { walkModeStream.Remove(a); }
+    public static void removeCrawlStream(PlayerModeDelegate a) { crawlModeStream.Remove(a); }
+    public static void removeJumpStream(PlayerModeDelegate a) { jumpModeStream.Remove(a); }
+    public static void removeStateChangeStream(PlayerModeDelegate a) { stateChangeStream.Remove(a); }
+    public static void removeIdleStream(PlayerModeDelegate a) { idleModeStream.Remove(a); }
+
+    private static void stateChangeEvent()
+    {
+        foreach(PlayerModeDelegate a in stateChangeStream)
+        {
+            a.Invoke();
+        }
+    }
 
     private static void instantAttackEvent()
     {
         foreach (PlayerModeDelegate a in attackModeStream)
         {
-            attackEvent += a;
-            attackEvent?.Invoke();
-            attackEvent -= a;
+            a.Invoke();
         }
         attackStreamReady = false;
     }
@@ -67,75 +75,101 @@ public class Event_Controller : MonoBehaviour
     {
         foreach (PlayerModeDelegate a in walkModeStream)
         {
-            walkEvent += a;
-            walkEvent?.Invoke();
-            walkEvent -= a;
+            a.Invoke();
         }
+        stateChangeEvent();
         walkStreamReady = false;
     }
     private static void InstantRunEvent()
     {
         foreach (PlayerModeDelegate a in runModeStream)
         {
-            runEvent += a;
-            runEvent?.Invoke();
-            runEvent -= a;
+            a.Invoke();
         }
+        stateChangeEvent();
         runStreamReady = false;
     }
     private static void InstantJumpEvent()
     {
         foreach (PlayerModeDelegate a in jumpModeStream)
         {
-            jumpEvent += a;
-            jumpEvent?.Invoke();
-            jumpEvent -= a;
+            a.Invoke();
         }
+        stateChangeEvent();
         jumpStreamReady = false;
     }
-    private static void instantCrawlEvent()
+    private static void InstantCrawlEvent()
     {
         foreach (PlayerModeDelegate a in crawlModeStream)
         {
-            crawlEvent += a;
-            crawlEvent?.Invoke();
-            crawlEvent -= a;
+            a.Invoke();
         }
+        stateChangeEvent();
         crawlStreamReady = false;
+    }
+    private static void InstantAimEvent()
+    {
+        foreach(PlayerModeDelegate a in aimModeStream)
+        {
+            a.Invoke();
+        }
+        stateChangeEvent();
+        aimStreamReady = false;
+    }
+    private static void InstantIdleEvent()
+    {
+        foreach(PlayerModeDelegate a in idleModeStream)
+        {
+            a.Invoke();
+        }
+        stateChangeEvent();
+        idleStreamReady = false;
     }
 
     void FixedUpdate()
     {
         if (attacking) {
-            if (attackStreamReady) { instantAttackEvent(); }
+            if (attackStreamReady) { attackStreamReady = false;  instantAttackEvent(); }
             attackEvent?.Invoke();
         }
-        else { attackStreamReady = true; }
+        else if (!attacking){ attackStreamReady = true; }
 
         if (jumping) {
-            if (jumpStreamReady) { InstantJumpEvent(); }
+            if (jumpStreamReady) { jumpStreamReady = false; InstantJumpEvent(); }
             jumpEvent?.Invoke(); 
         }
         else { jumpStreamReady = true; }
 
         if (crawling) {
-            if (crawlStreamReady) { instantCrawlEvent(); }
+            if (crawlStreamReady) { crawlStreamReady = false; InstantCrawlEvent(); }
             crawlEvent?.Invoke();
         }
         else { crawlStreamReady = true; }
 
         if (walking) {
-            if (walkStreamReady) { InstantWalkEvent(); }
+            if (walkStreamReady) { walkStreamReady = false; InstantWalkEvent(); }
             walkEvent?.Invoke(); }
         else { walkStreamReady = true; }
 
         if (running) {
-            if (runStreamReady) { InstantRunEvent(); }
+            if (runStreamReady) { runStreamReady = false; InstantRunEvent(); }
             runEvent?.Invoke(); }
         else { runStreamReady = true; }
 
-        if (idling) { idleEvent?.Invoke(); }
+        if (aiming)
+        {
+            if (aimStreamReady) { aimStreamReady = false; InstantAimEvent(); }
+            aimEvent?.Invoke();
+        }
+        else { aimStreamReady = true; }
+
+        if (idling)
+        {
+            if (idleStreamReady) { idleStreamReady = false; InstantIdleEvent(); }
+            idleEvent?.Invoke(); }
+        else { idleStreamReady = true; }
         timeBasedEvent?.Invoke();
+       // print(timeBasedEvent?.GetInvocationList().Length);
     }
 }
 
@@ -143,15 +177,16 @@ public class Event_Controller : MonoBehaviour
 // class for a calculating time in TimedEvent
 public class TimeBased
 {
-    float runTime, endTime;
-    int currentTimeIndex;
+    public float runTime, endTime;
+    Event_Controller.PlayerModeDelegate endEvent;
+    Event_Controller.PlayerModeDelegate continuousEvent;
 
     public TimeBased(float _endTime, Event_Controller.PlayerModeDelegate endTimeEvent, Event_Controller.PlayerModeDelegate runningEvent) {
-        Event_Controller.timeBasedStream.Add(new Event_Controller.PlayerModeDelegate[] { endTimeEvent, runningEvent });
-        currentTimeIndex = Event_Controller.timeBasedStream.ToArray().Length - 1;
-        Event_Controller.timeBasedEvent += startTime;
-        Event_Controller.timeBasedEvent += Event_Controller.timeBasedStream[currentTimeIndex][1];
         endTime = _endTime;
+        endEvent = endTimeEvent;
+        continuousEvent = runningEvent;
+        Event_Controller.timeBasedEvent += startTime;
+        Event_Controller.timeBasedEvent += continuousEvent;
     }
 
     public void startTime()
@@ -159,15 +194,25 @@ public class TimeBased
         runTime += Time.deltaTime;
         if(runTime > endTime)
         {
-            runTime = 0;
             finishTime();
-            Event_Controller.timeBasedEvent -= startTime;
+            endEvent?.Invoke();
         }
+    }
+
+    public void killTime(bool callEndEvent)
+    {
+        finishTime();
+        if(callEndEvent) { endEvent?.Invoke(); }
+    }
+
+    public void restartTime()
+    {
+        runTime = 0;
     }
 
     private void finishTime()
     {
-        Event_Controller.QuickEvent(Event_Controller.timeBasedStream[currentTimeIndex][0]);
-        Event_Controller.timeBasedEvent -= Event_Controller.timeBasedStream[currentTimeIndex][1];
+        Event_Controller.timeBasedEvent -= startTime;
+        Event_Controller.timeBasedEvent -= continuousEvent;
     }
 }

@@ -16,9 +16,19 @@ public class Enemy_Object : ScriptableObject
         swirl
     }
 
+    public enum EnemyAttacMode
+    {
+        Melee,
+        Shoot,
+        Throw
+    }
+
+    public float EnemyHealth;
     public float EnemySpeed;
     public float EnemyStopRange;
     public MoveMode EnemyMoveMode;
+    public EnemyAttacMode EnemyAttackMethod;
+    public GameObject EnemyWeapon;
     public EnemyAttributes EnemyAttributes;
 }
 

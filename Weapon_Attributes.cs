@@ -8,6 +8,9 @@ namespace StatEffect
 {
     public class AttributeInstance
     {
+        protected static Dictionary<GameObject, LinearHealthModifier> linearHealthStream = new Dictionary<GameObject, LinearHealthModifier>();
+        protected static Dictionary<GameObject, MoveSpeedModifier> speedStream = new Dictionary<GameObject, MoveSpeedModifier>();
+
         /// <summary>
         /// 
         /// </summary>
@@ -17,15 +20,25 @@ namespace StatEffect
         /// <param name="modifier"> type of modifier </param>
         /// <param name="gb"> gameObject the modifier affects </param>
         public static void beginModifier(float value1, float value2, char modifier, GameObject gb, float value3 = 0)
-        {
+        { 
             switch (modifier) {
                 case 's':
-                    MoveSpeedModifier s = new MoveSpeedModifier(value1, value2);
-                    s.startModifier(gb);
+                    if (speedStream.ContainsKey(gb)) { speedStream[gb].RestartEvent(); }
+                    else
+                    {
+                        MoveSpeedModifier s = new MoveSpeedModifier(value1, value2);
+                        speedStream.Add(gb, s);
+                        s.startModifier(gb);
+                    }
                     break;
                 case 'l':
-                    LinearHealthModifier l = new LinearHealthModifier(value1, value2, value3);
-                    l.startModifier(gb);
+                    if (linearHealthStream.ContainsKey(gb)) { linearHealthStream[gb].RestartEvent(); }
+                    else
+                    {
+                        LinearHealthModifier l = new LinearHealthModifier(value1, value2, value3);
+                        linearHealthStream.Add(gb, l);
+                        l.startModifier(gb);
+                    }
                     break;
             }
         }
@@ -41,6 +54,8 @@ namespace StatEffect
         private float slownessLength = 0;
         private float slownessPercent = 0;
         private GameObject modifiedGb;
+        private TimeBased t;
+
         public MoveSpeedModifier(float slownessLth, float slownessPct)
         {
             slownessPercent = slownessPct;
@@ -53,13 +68,13 @@ namespace StatEffect
             switch (gb.tag)
             {
                 case "Enemy":
-                    modifiedGb.GetComponent<Enemy_Controller>().enemySpeedModifier *= slownessPercent;
+                        modifiedGb.GetComponent<Enemy_Controller>().enemySpeedModifier *= slownessPercent;
                     break;
                 case "Player":
                     Player_Controller.speedModifier *= slownessPercent;
                     break;
             }
-            Event_Controller.TimedEvent(resetModifier, null, slownessLength);
+            Event_Controller.TimedEvent(resetModifier, null, slownessLength, out t);
         }
 
         private void resetModifier()
@@ -76,16 +91,22 @@ namespace StatEffect
                         break;
                 }
             }
+            speedStream.Remove(modifiedGb);
         }
+
+        public void RestartEvent() { t.restartTime(); }
     }
    
-    public class LinearHealthModifier
+    public class LinearHealthModifier : AttributeInstance
     {
         private float depletion, rate, duration;
         private float runTime, runCounter;
         private GameObject modifiedGb;
+        private TimeBased t;
+
         public LinearHealthModifier( float time, float damage, float timeIncrement)
         {
+            runCounter = timeIncrement;
             rate = timeIncrement;
             depletion = damage;
             duration = time;
@@ -93,9 +114,13 @@ namespace StatEffect
         public void startModifier(GameObject gb)
         {
             modifiedGb = gb;
-            Event_Controller.TimedEvent(null, depleteHealth, duration);
+            Event_Controller.TimedEvent(Reset, DepleteHealth, duration, out t);
         }
-        private void depleteHealth()
+        public void RestartEvent()
+        {
+            t.restartTime();
+        }
+        private void DepleteHealth()
         {
             runTime += Time.deltaTime;
             if (runTime > runCounter)
@@ -104,6 +129,9 @@ namespace StatEffect
                 Health_Base.changeEntityHeath(modifiedGb, depletion);
             }
         }
-
+        private void Reset()
+        {
+            linearHealthStream.Remove(modifiedGb);
+        }
     }
 }

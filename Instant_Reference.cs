@@ -5,19 +5,32 @@ using UnityEngine;
 public class Instant_Reference : MonoBehaviour
 {
     public GameObject r_playerReference;
+    public GameObject r_UIController;
     public static GameObject playerReference;
     public static GameObject playerRightHand;
-
+    public static GameObject UIController;
     public static Camera mainCamera;
 
     // Start is called before the first frame update
     void Start()
     {
         playerReference = r_playerReference;
+        UIController = r_UIController;
         mainCamera = playerReference.GetComponent<Player_Controller>().playerCamera;
         playerRightHand = mainCamera.transform.GetChild(1).gameObject;
     }
     // Update is called once per frame
+
+    public static float FixArcSine(float arcsine)
+    {
+        if(arcsine <= 90 && arcsine >= -90){ return arcsine; }
+        else { return arcsine - 180; }
+    }
+
+    public static string[] GetPlayerLayermask()
+    {
+        return new string[] { "Terrain", "Entity" };
+    }
 
     public static Ray getPlayerCamStraightRay()
     {
@@ -34,20 +47,29 @@ public class Instant_Reference : MonoBehaviour
 
     public static Ray getRightHandToHitRay(float range)
     {
-        return new Ray(getRightHandPosition(), getHitPoint(range) - getRightHandPosition());
+        return new Ray(getRightHandPosition(), getPlayerHitPoint(range) - getRightHandPosition());
     }
 
-    public static Ray getRightHandToHitRayParallel(float range, Vector3 position)
+    /// <summary>
+    /// returns a ray on the xz plane with constant y-value upon hitting a raycast target
+    /// </summary>
+    /// <param name="origin">origin of the ray</param>
+    /// <param name="destination">where the ray hits</param>
+    /// <param name="range"></param>
+    /// <returns></returns>
+    public static Ray getHitParallelRay(Vector3 origin, Vector3 destination, float range)
     {
-        return new Ray(position, new Vector3(
-                                                            getHitPoint(range).x - getRightHandPosition().x,
-                                                            0,
-                                                            getHitPoint(range).z - getRightHandPosition().z));
+        return new Ray(origin, new Vector3(
+            getHitPoint(origin, destination - origin, range).x - origin.x,
+            0,
+            getHitPoint(origin, destination - origin, range).z - origin.z));
     }
+
 
     public static Vector3 getRightHandToHitVector(float range)
     {
-        return new Ray(getRightHandPosition(), getHitPoint(range) - getRightHandPosition()).GetPoint(range);
+        return new Ray(getRightHandPosition(), 
+            getPlayerHitPoint(range) - getRightHandPosition()).GetPoint(range);
     }
 
     public static Vector3 getPlayerCamStraightVector()
@@ -65,12 +87,12 @@ public class Instant_Reference : MonoBehaviour
         return playerRightHand.transform.position;
     }
 
-    //Retrieve the point hit by the straightray.
-    public static Vector3 getHitPoint(float range){
-        LayerMask mask = LayerMask.GetMask("Terrain");
+    public static Vector3 getPlayerHitPoint(float range)
+    {
+        LayerMask mask = LayerMask.GetMask("Terrain", "Entity");
         RaycastHit hitPoint; // never instantiate a rayCastHit Object outside of the method scope
 
-        if (Physics.Raycast(getPlayerCamStraightRay(), out hitPoint, range,mask))
+        if (Physics.Raycast(getPlayerCamStraightRay(), out hitPoint, range, mask))
         {
             return hitPoint.point;
         }
@@ -79,4 +101,20 @@ public class Instant_Reference : MonoBehaviour
             return getPlayerCamStraightRay().GetPoint(range);
         }
     }
+
+    //Retrieve the point hit by the straightray.
+    public static Vector3 getHitPoint(Vector3 origin, Vector3 direction, float range){
+        LayerMask mask = LayerMask.GetMask("Terrain", "Entity");
+        RaycastHit hitPoint; // never instantiate a rayCastHit Object outside of the method scope
+
+        if (Physics.Raycast(new Ray(origin, direction), out hitPoint, range,mask))
+        {
+            return hitPoint.point;
+        }
+        else
+        {
+            return new Ray(origin, direction).GetPoint(range);
+        }
+    }
+
 }
