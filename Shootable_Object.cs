@@ -21,6 +21,7 @@ public class Shootable_Object : ScriptableObject
     public float ShootableAmount;
     public float ShootableLatency;
     public float ShootableBlastRange;
+    public float ReloadSpeed;
     public int Durability;
     public int Ammo;
     public GameObject Bullet;
@@ -50,7 +51,7 @@ public class ShootableBurst
 public class ShootableAttributes
 {
     public char[] ShootableAttributeList;
-    public Vector3[] ShootableAttributeValues;
+    public Vector4[] ShootableAttributeValues;
 }
 
 [Serializable]

@@ -5,13 +5,14 @@ using UnityEngine;
  * Top Class for weapons: Shootables, Shootables, and Melees
  * Use as template for all shootables.
  */
+ 
+    /* TODO: Bug: When throwing, instantiation puts new object at current object position, causing layer parameter to be null
+      */
 
 public class Shootable : Weapon_Control
 {
     private Shootable_Object.BulletType bulletMode;
     private GameObject bullet;
-    private RectTransform[] crosshairs;
-    private Vector3[] crosshairsPos;
     private float fireRate;
     private float runTime;
     private int ammo;
@@ -21,7 +22,8 @@ public class Shootable : Weapon_Control
     private TimeBased shootController;
     private TimeBased burstController;
 
-    public Transform canvas;
+    [SerializeField]
+    private GameObject UIController;
 
     public void OnEnable()
     {
@@ -38,7 +40,8 @@ public class Shootable : Weapon_Control
         Event_Controller.addJumpStream(JumpBurst);
         Event_Controller.addIdleStream(IdleBurst);
         Event_Controller.addStateChangeStream(ChangeCrossHair);
-        SetCrosshairs();
+        UIController.GetComponent<Screen_Interface>().SetCrosshair(shootableWeapon.Crosshair);
+        ChangeCrossHair();
     }
 
     
@@ -87,7 +90,6 @@ public class Shootable : Weapon_Control
         {
             shootReady = false;
             Reload();
-            ammo = shootableWeapon.Ammo;
         }
         else if (runTime > fireRate && reloadTimeController == null && ammo > 0)
         {
@@ -103,21 +105,9 @@ public class Shootable : Weapon_Control
         {
             ammo = shootableWeapon.Ammo; reloadTimeController = null; Instant_Reference.UIController.GetComponent<Screen_Interface>().ChangeAmmo(ammo);
         }, 
-        null, 2, out reloadTimeController);
+        null, shootableWeapon.ReloadSpeed, out reloadTimeController);
     }
-    
-    private void SetCrosshairs()
-    {
-        crosshairs = new RectTransform[shootableWeapon.Crosshair.childCount];
-        crosshairsPos = new Vector3[shootableWeapon.Crosshair.childCount];
-        Transform crosshairParent = Instantiate(shootableWeapon.Crosshair, canvas);
 
-        for (int i = 0; i < shootableWeapon.Crosshair.childCount; i++)
-        {
-            crosshairs[i] = crosshairParent.GetChild(i).GetComponent<RectTransform>();
-            crosshairsPos[i] = crosshairs[i].localPosition;
-        }
-    }
 
     private void AimBurst()
     {
@@ -146,13 +136,13 @@ public class Shootable : Weapon_Control
             ? burst[0] + shootableWeapon.ShootableBurst.AttackBurstIncrement[0] 
             : anteAttackBurst[0] + shootableWeapon.ShootableBurst.MaxAttackBurst;
 
-       Instant_Reference.UIController.GetComponent<Screen_Interface>().ChangeCrosshair(UnAttackBurst, crosshairs,
-           burst[0], shootableWeapon.ShootableBurst.AttackBurstIncrement[1], crosshairsPos, true);
+       UIController.GetComponent<Screen_Interface>().ChangeCrosshair(UnAttackBurst,
+           burst[0], shootableWeapon.ShootableBurst.AttackBurstIncrement[1], true);
     }
     private void UnAttackBurst()
     {
-        Instant_Reference.UIController.GetComponent<Screen_Interface>().ChangeCrosshair(RestoreBurst, crosshairs, 
-            anteAttackBurst[0],shootableWeapon.ShootableBurst.UnAttackBurstSpeed, crosshairsPos, false);
+        UIController.GetComponent<Screen_Interface>().ChangeCrosshair(RestoreBurst, anteAttackBurst[0],
+            shootableWeapon.ShootableBurst.UnAttackBurstSpeed, false);
     }
     private void RestoreBurst()
     {
@@ -161,7 +151,7 @@ public class Shootable : Weapon_Control
     private void ChangeCrossHair()
     { 
         anteAttackBurst = burst;
-        Instant_Reference.UIController.GetComponent<Screen_Interface>().ChangeCrosshair(null, crosshairs, burst[0], burst[1], crosshairsPos, true);
+        UIController.GetComponent<Screen_Interface>().ChangeCrosshair(null, burst[0], burst[1], true);
     }
 
     private void OnDisable()
@@ -172,10 +162,11 @@ public class Shootable : Weapon_Control
         Event_Controller.removeJumpStream(JumpBurst);
         Event_Controller.removeIdleStream(IdleBurst);
         Event_Controller.removeStateChangeStream(ChangeCrossHair);
+        Event_Controller.attackEvent -= FireWeapon;
+        UIController.GetComponent<Screen_Interface>().DeleteCrossHair();
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    private void Update()
     {
         FireRate();
     }

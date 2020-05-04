@@ -11,20 +11,27 @@ public class Screen_Interface : MonoBehaviour
     [SerializeField]
     private GameObject healthBar;
     [SerializeField]
+    private GameObject weaponSlot;
+    [SerializeField]
     private TextMeshProUGUI ammoText;
 
     private Transform healthBarController;
+    private Transform selectedSlot;
     public static Transform canvas;
+    private Transform crosshairParent;
     private RectTransform[] crosshairTrans;
     private Vector3 currentHealthBarScale;
     private Vector3 newHealthBarScale;
-    private Vector3[] crossHairPos;
+    private Vector3[] crosshairPos;
+    private Vector3[] crosshairPosOrigin;
     private Vector3 originalCHPos;
     private float chMoveAmt, chMoveSpeed;
+    private float currentSlot;
     private float runningTime;
     private float chRunningTime;
 
-    private const float kInfoY = 50;
+    private const float kInfoY = 80;
+    private const float kSlotY = 30;
     private const float kAmmoFromHBX = 120;
     private const float kHealthBarAnimationLength = 1;
 
@@ -33,9 +40,12 @@ public class Screen_Interface : MonoBehaviour
 
     private void Start()
     {
+        currentSlot = 1;
+        selectedSlot = weaponSlot.transform.GetChild(0);
         canvas = transform.GetChild(0);
         healthBarController = healthBar.transform.parent;
         healthBarController.position = new Vector3(Screen.width / 2, kInfoY, 0);
+        weaponSlot.transform.position = new Vector3(Screen.width / 2, kSlotY, 0);
         ammoText.transform.position = new Vector3(healthBarController.position.x - kAmmoFromHBX, kInfoY, 0);
     }
 
@@ -70,21 +80,34 @@ public class Screen_Interface : MonoBehaviour
         ammoText.text = amount.ToString();
     }
 
-    public void ChangeCrosshair(Event_Controller.PlayerModeDelegate finishEvent, RectTransform[] crosshairs, float moveAmount, float moveSpeed, Vector3[] originalPos, bool replace)
+    public void ChangeCrosshair(Event_Controller.PlayerModeDelegate finishEvent,float moveAmount, float moveSpeed, bool replace)
     {
         if (crossHairTB != null && replace) { crossHairTB.killTime(true); }
         chRunningTime = 0;
-        crossHairPos = new Vector3[crosshairs.Length];
-        crosshairTrans = crosshairs;
-        originalCHPos = originalPos[0];
         chMoveAmt = moveAmount;
         chMoveSpeed = moveSpeed;
 
-        for (int i = 0; i < crosshairs.Length; i++)
+        for (int i = 0; i < crosshairTrans.Length; i++)
         {
-            crossHairPos[i] = originalPos[i] * moveAmount;
+            crosshairPos[i] = crosshairPosOrigin[i] * moveAmount;
         }
         Event_Controller.TimedEvent(finishEvent, MoveCrosshair, moveSpeed, out crossHairTB);
+    }
+
+    public void SetCrosshair(RectTransform crosshair)
+    {
+        crosshairTrans = new RectTransform[crosshair.childCount];
+        crosshairPos = new Vector3[crosshair.childCount];
+        crosshairPosOrigin = new Vector3[crosshair.childCount];
+
+        crosshairParent = Instantiate(crosshair, transform.GetChild(0));
+
+        for (int i = 0; i < crosshair.childCount; i++)
+        {
+            crosshairTrans[i] = crosshairParent.GetChild(i).GetComponent<RectTransform>();
+            crosshairPos[i] = crosshairTrans[i].localPosition;
+            crosshairPosOrigin[i] = crosshairTrans[i].localPosition;
+        }
     }
 
     private void MoveCrosshair()
@@ -94,12 +117,24 @@ public class Screen_Interface : MonoBehaviour
 
         for (int i = 0; i < crosshairTrans.Length; i++)
         { 
-            crosshairTrans[i].localPosition = Vector3.Lerp(crosshairTrans[i].localPosition, crossHairPos[i], pct);
+            crosshairTrans[i].localPosition = Vector3.Lerp(crosshairTrans[i].localPosition, crosshairPos[i], pct);
         }
+    }
+
+    public void DeleteCrossHair()
+    {
+        crossHairTB.killTime(false);
+        Destroy(crosshairParent.gameObject);
     }
 
     public float GetCrosshairBurst()
     {
-        return crosshairTrans[0].localPosition.magnitude / originalCHPos.magnitude;
+        return crosshairTrans[0].localPosition.magnitude / crosshairPosOrigin[0].magnitude;
     }
+
+    public void SwitchWeaponSlot(int slot)
+    {
+        Instant_Reference.playerRightHand.GetComponent<Weapon_Control>().toggleWeaponScripts(slot);
+        selectedSlot.position = weaponSlot.transform.GetChild(slot).position;
+    } 
 }

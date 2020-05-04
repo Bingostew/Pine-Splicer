@@ -14,10 +14,13 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
     private delegate void EnemyDelegate();
     private event EnemyDelegate moveMode;
     private event EnemyDelegate attackMode;
+    private TimeBased enemyShootController;
+    private TimeBased reloadController;
 
     private Ray enemyToPlayerRay;
 
     private float enemySpeed, enemyStopRange;
+    private int ammo;
     private float runningTime;
     private string[] layermask = new string[] { "Player", "Terrain"};
 
@@ -30,12 +33,13 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
         enemyStopRange = enemyObject.EnemyStopRange;
         enemyWp = enemyObject.EnemyWeapon;
         enemyShootable = enemyWp.GetComponent<Weapon_Data>().shootableObject;
+        ammo = enemyShootable.Ammo;
         #endregion
         enemyCC = GetComponent<CharacterController>();
 
         enemySpeedModifier = 1;
 
-        SetAttackMode();
+        attackMode += FireWeapon;
         switch (enemyObject.EnemyMoveMode)
         {
             case Enemy_Object.MoveMode.aggressive: moveMode += AggressiveMovement; break;
@@ -48,27 +52,33 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
         Health_Base.addEntityHealth(gameObject, health);
     }
 
-    private void SetAttackMode()
-    {
-        switch (enemyObject.EnemyAttackMethod)
-        {
-            case Enemy_Object.EnemyAttacMode.Shoot:
-                attackMode += ShootAttack;
-                break;
-        }
-    }
 
     // charges at player with linear speed
     private void AggressiveMovement()
     {        Vector3 enemyToPlayerVec = new Vector3(Instant_Reference.getPlayerPosition().x, 0 , Instant_Reference.getPlayerPosition().z)  
             - new Vector3(transform.position.x, 0, transform.position.z);
 
-        if (Vector3.Distance(Instant_Reference.getPlayerPosition(), transform.position) > enemyStopRange)
+        if (Vector3.Distance(Instant_Reference.getPlayerPosition(), transform.position) >  enemyStopRange)
         {
             enemyCC.SimpleMove(enemyToPlayerVec * Time.deltaTime * enemySpeed * enemySpeedModifier);
         }
     }
 
+
+    private void FireWeapon()
+    {
+        if (Vector3.Distance(Instant_Reference.getPlayerPosition(), transform.position) < enemyObject.EnemyAttackRange)
+        {
+            Instantiate(enemyShootable.ShootParticle, transform.position, Quaternion.identity);
+            runningTime = 0;
+            ammo -= 1;
+
+            for (int i = 0; i < enemyShootable.ShootableAmount; i++)
+            {
+                Event_Controller.TimedEvent(ShootAttack, null, enemyShootable.ShootableLatency * i, out enemyShootController);
+            }
+        }
+    }
 
     private void ShootAttack()
     {
@@ -77,8 +87,8 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
         float arcAngle = Mathf.Asin(20 * Vector3.Distance(transform.position, 
             new Vector3(Instant_Reference.getPlayerPosition().x, 0 ,Instant_Reference.getPlayerPosition().z)) /
             (2 * enemyShootable.ShootableForce * enemyShootable.ShootableForce)) * 180  / Mathf.PI;
-        GameObject enemyWeapon = Instantiate(enemyWp, transform.position, Quaternion.identity);
-        enemyWeapon.GetComponent<Object_Motion>().setFlight(
+        GameObject bullet = Instantiate(enemyShootable.Bullet, transform.position, Quaternion.identity);
+        bullet.GetComponent<Object_Motion>().setFlight(
             enemyShootable.ShootableForce,
             enemyShootable.ShootableDamage,
             enemyShootable.ShootableBlastRange,
@@ -93,11 +103,24 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
     private void FireRate()
     {
         runningTime += Time.deltaTime;
-        if(runningTime > enemyShootable.ShootableFireRate)
+        if(ammo <= 0 && reloadController == null)
+        {
+            Reload();
+        }
+        else if(ammo > 0 && runningTime > enemyShootable.ShootableFireRate && reloadController == null)
         {
             runningTime = 0;
             attackMode?.Invoke();
         }
+    }
+
+    private void Reload()
+    {
+        Event_Controller.TimedEvent(() =>
+        {
+            ammo = enemyShootable.Ammo; reloadController = null;
+        },
+        null, enemyShootable.ReloadSpeed, out reloadController);
     }
 
     public void Death()

@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System;
 
 //TODO: FIX: 
         //-Throwable Scriptable
@@ -86,6 +86,13 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
         if (Input.GetKeyDown(KeyCode.Space) && !readyToJump) {   
             instantJumpPlayer();
         }
+    }
+
+    private void SwitchWeapons()
+    {
+        int slot = 0;
+        int.TryParse(Input.inputString, out slot);
+        if(slot < 6 && slot > 0) { Instant_Reference.UIController.GetComponent<Screen_Interface>().SwitchWeaponSlot(slot); }
     }
 
     #region jumpingTriggers
@@ -203,6 +210,7 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
     {
       //  print("player health " + Health_Base.getEntityHeath(gameObject));
         ConfigurePlayerMode();
+        SwitchWeapons();
     }
 
     private void Update()

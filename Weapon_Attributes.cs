@@ -11,22 +11,15 @@ namespace StatEffect
         protected static Dictionary<GameObject, LinearHealthModifier> linearHealthStream = new Dictionary<GameObject, LinearHealthModifier>();
         protected static Dictionary<GameObject, MoveSpeedModifier> speedStream = new Dictionary<GameObject, MoveSpeedModifier>();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="value1"> time the modifier lasts </param>
-        /// <param name="value2"></param>
-        /// <param name="value3"> optional value depend on the modifier </param>
-        /// <param name="modifier"> type of modifier </param>
-        /// <param name="gb"> gameObject the modifier affects </param>
-        public static void beginModifier(float value1, float value2, char modifier, GameObject gb, float value3 = 0)
+
+        public static void beginModifier(float value1, float value2, float damage, char modifier, GameObject gb, GameObject gbOrigin = null, float value3=0, float value4 = 0)
         { 
             switch (modifier) {
                 case 's':
                     if (speedStream.ContainsKey(gb)) { speedStream[gb].RestartEvent(); }
                     else
                     {
-                        MoveSpeedModifier s = new MoveSpeedModifier(value1, value2);
+                        MoveSpeedModifier s = new MoveSpeedModifier(value1, value2, damage);
                         speedStream.Add(gb, s);
                         s.startModifier(gb);
                     }
@@ -35,10 +28,26 @@ namespace StatEffect
                     if (linearHealthStream.ContainsKey(gb)) { linearHealthStream[gb].RestartEvent(); }
                     else
                     {
-                        LinearHealthModifier l = new LinearHealthModifier(value1, value2, value3);
+                        LinearHealthModifier l = new LinearHealthModifier(value1, value2, value3, damage);
                         linearHealthStream.Add(gb, l);
                         l.startModifier(gb);
                     }
+                    break;
+                case 'b':
+                    BounceShotModifier b = new BounceShotModifier();
+                    b.startModifier(gbOrigin, gb, value1, value2, damage);
+                    break;
+                case 'g':
+                    ShotgunModifier g = new ShotgunModifier();
+                    g.startModifier(gb, gbOrigin, damage);
+                    break;
+                case 'd':
+                    ContactDetonatorModifier d = new ContactDetonatorModifier();
+                    d.startModifier(gbOrigin);
+                    break;
+                case 'p':
+                    PlayerHealthModifier p = new PlayerHealthModifier();
+                    p.startModifier(gb, value1);
                     break;
             }
         }
@@ -47,23 +56,25 @@ namespace StatEffect
     // Each attribute class contains: 
     // - Method to handle change- either through modifiers or directly change static variables
     // - Event handling: add/ subtract event
-    // - Timer
 
     public class MoveSpeedModifier : AttributeInstance
     {
         private float slownessLength = 0;
         private float slownessPercent = 0;
+        private float metaDamage = 0;
         private GameObject modifiedGb;
         private TimeBased t;
 
-        public MoveSpeedModifier(float slownessLth, float slownessPct)
+        public MoveSpeedModifier(float slownessLth, float slownessPct, float _metaDamage)
         {
             slownessPercent = slownessPct;
             slownessLength = slownessLth;
+            metaDamage = _metaDamage;
         }
 
         public void startModifier(GameObject gb)
         {
+            Health_Base.changeEntityHeath(gb, metaDamage, false);
             modifiedGb = gb;
             switch (gb.tag)
             {
@@ -101,18 +112,21 @@ namespace StatEffect
     {
         private float depletion, rate, duration;
         private float runTime, runCounter;
+        private float metaDamage;
         private GameObject modifiedGb;
         private TimeBased t;
 
-        public LinearHealthModifier( float time, float damage, float timeIncrement)
+        public LinearHealthModifier( float time, float damage, float timeIncrement, float _metaDamage)
         {
             runCounter = timeIncrement;
             rate = timeIncrement;
             depletion = damage;
             duration = time;
+            metaDamage = _metaDamage;
         }
         public void startModifier(GameObject gb)
         {
+            Health_Base.changeEntityHeath(gb, metaDamage, false);
             modifiedGb = gb;
             Event_Controller.TimedEvent(Reset, DepleteHealth, duration, out t);
         }
@@ -126,12 +140,48 @@ namespace StatEffect
             if (runTime > runCounter)
             {
                 runCounter += rate;
-                Health_Base.changeEntityHeath(modifiedGb, depletion);
+                Health_Base.changeEntityHeath(modifiedGb, depletion, false);
             }
         }
         private void Reset()
         {
             linearHealthStream.Remove(modifiedGb);
+        }
+    }
+
+    public class BounceShotModifier : AttributeInstance
+    {
+        public void startModifier(GameObject gbOrigin, GameObject gb,float power, float randomBounce, float metaDamage)
+        {
+            Health_Base.changeEntityHeath(gb, metaDamage, false);
+            gbOrigin.GetComponent<Object_Motion>().RestartFlight( power, randomBounce);
+        }
+    }
+
+    public class ShotgunModifier : AttributeInstance
+    {
+        public void startModifier(GameObject gb, GameObject gbOrigin, float metaDamage)
+        {
+            Health_Base.changeEntityHeath(gb, metaDamage, true);
+        }
+    }
+
+    public class ContactDetonatorModifier : AttributeInstance
+    {
+        public void startModifier(GameObject gbOrigin)
+        {
+            gbOrigin.GetComponent<Object_Motion>().endFlight();
+        }
+    }
+
+    public class PlayerHealthModifier : AttributeInstance
+    {
+        public void startModifier(GameObject gb, float healingAmount)
+        {
+            if (gb.layer == 9)
+            {
+                Health_Base.changeEntityHeath(Instant_Reference.playerReference, -healingAmount, false);
+            }
         }
     }
 }

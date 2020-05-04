@@ -26,6 +26,7 @@ public class Enemy_Object : ScriptableObject
     public float EnemyHealth;
     public float EnemySpeed;
     public float EnemyStopRange;
+    public float EnemyAttackRange;
     public MoveMode EnemyMoveMode;
     public EnemyAttacMode EnemyAttackMethod;
     public GameObject EnemyWeapon;
