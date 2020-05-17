@@ -19,7 +19,7 @@ public class Screen_Interface : MonoBehaviour
     private Transform selectedSlot;
     public static Transform canvas;
     private Transform crosshairParent;
-    private RectTransform[] crosshairTrans;
+    private RectTransform[] crosshairTrans = new RectTransform[4];
     private Vector3 currentHealthBarScale;
     private Vector3 newHealthBarScale;
     private Vector3[] crosshairPos;
@@ -49,11 +49,13 @@ public class Screen_Interface : MonoBehaviour
         ammoText.transform.position = new Vector3(healthBarController.position.x - kAmmoFromHBX, kInfoY, 0);
     }
 
-    public void IndicateDamage(GameObject gb, float damage)
+    public void IndicateDamage(Vector3 position, float damage, Health_Base.DamageType d)
     {
-        Vector3 pos = Instant_Reference.mainCamera.WorldToScreenPoint(gb.transform.position);
+        Color c = d == Health_Base.DamageType.EnemyHead ? Color.yellow : Color.white;
+        Vector3 pos = Instant_Reference.mainCamera.WorldToScreenPoint(position);
         GameObject tmp = Instantiate(damagePopUp);
-        tmp.GetComponent<Damage_Transform>().SetPosition(gb.transform.position, damage);
+
+        tmp.GetComponent<Damage_Transform>().SetPosition(position, damage,c);
         tmp.transform.SetParent(canvas);
     }
 
@@ -82,7 +84,7 @@ public class Screen_Interface : MonoBehaviour
 
     public void ChangeCrosshair(Event_Controller.PlayerModeDelegate finishEvent,float moveAmount, float moveSpeed, bool replace)
     {
-        if (crossHairTB != null && replace) { crossHairTB.killTime(true); }
+        if (crossHairTB != null && replace) { crossHairTB.killTime(false); }
         chRunningTime = 0;
         chMoveAmt = moveAmount;
         chMoveSpeed = moveSpeed;
@@ -123,6 +125,7 @@ public class Screen_Interface : MonoBehaviour
 
     public void DeleteCrossHair()
     {
+        print(crosshairParent);
         crossHairTB.killTime(false);
         Destroy(crosshairParent.gameObject);
     }

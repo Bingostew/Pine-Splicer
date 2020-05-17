@@ -84,19 +84,18 @@ public class Enemy_Controller : MonoBehaviour, ObjectHealth
     {
         enemyToPlayerRay = new Ray(transform.position, Instant_Reference.getPlayerPosition() - transform.position);
         // arcsin((ax)/(2m^2)
-        float arcAngle = Mathf.Asin(20 * Vector3.Distance(transform.position, 
+        float arcAngle = Mathf.Asin(Object_Motion.verticalAccerlation * Vector3.Distance(transform.position, 
             new Vector3(Instant_Reference.getPlayerPosition().x, 0 ,Instant_Reference.getPlayerPosition().z)) /
             (2 * enemyShootable.ShootableForce * enemyShootable.ShootableForce)) * 180  / Mathf.PI;
         GameObject bullet = Instantiate(enemyShootable.Bullet, transform.position, Quaternion.identity);
         bullet.GetComponent<Object_Motion>().setFlight(
             enemyShootable.ShootableForce,
-            enemyShootable.ShootableDamage,
+            enemyShootable.ShootableDamage, enemyShootable.ShootableCriticalDamage,
             enemyShootable.ShootableBlastRange,
             transform.position,
             Weapon_Control.CalculateBurst(transform.position, enemyToPlayerRay.GetPoint(enemyShootable.ShootableForce) - transform.position,
             enemyShootable.ShootableForce, enemyShootable.ShootableBurst.BaseBurst[0]),
             enemyShootable.HitParticle,
-            enemyShootable.ShootableAttributes.ShootableAttributeList, enemyShootable.ShootableAttributes.ShootableAttributeValues,
             layermask, enemyShootable.BulletMode.ToString(), arcAngle, enemyShootable.ShootableTime);
     }
 

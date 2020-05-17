@@ -33,14 +33,13 @@ public class Shootable : Weapon_Control
         fireRate = shootableWeapon.ShootableFireRate;
         ammo = shootableWeapon.Ammo;
         burst = shootableWeapon.ShootableBurst.BaseBurst;
-
+        UIController.GetComponent<Screen_Interface>().SetCrosshair(shootableWeapon.Crosshair);
         Event_Controller.addAimStream(AimBurst);
         Event_Controller.addWalkStream(WalkBurst);
         Event_Controller.addRunStream(RunBurst);
         Event_Controller.addJumpStream(JumpBurst);
         Event_Controller.addIdleStream(IdleBurst);
         Event_Controller.addStateChangeStream(ChangeCrossHair);
-        UIController.GetComponent<Screen_Interface>().SetCrosshair(shootableWeapon.Crosshair);
         ChangeCrossHair();
     }
 
@@ -63,22 +62,40 @@ public class Shootable : Weapon_Control
         }
     }
 
+    private void DetectHitscanHit() // **KNown Issue - calling damageAttributes cause damage marker instantiate on gun position, not hit position
+    {
+        RaycastHit h;
+        if (Physics.Raycast(heldWeapon.GetComponent<Weapon_Data>().getShootOrigin(), CalculateBurst(heldWeapon.GetComponent<Weapon_Data>().getShootOrigin(),
+                            Instant_Reference.getRightHandToHitRay(shootableWeapon.ShootableForce).direction,
+                            shootableWeapon.ShootableForce, Instant_Reference.UIController.GetComponent<Screen_Interface>().GetCrosshairBurst()) -
+                            heldWeapon.GetComponent<Weapon_Data>().getShootOrigin(), 
+                            out h, shootableWeapon.ShootableForce, LayerMask.GetMask(Instant_Reference.GetPlayerLayermask())))
+        {
+            OnObjectHit(h.transform.gameObject, gameObject, shootableWeapon.ShootableDamage, shootableWeapon.ShootableCriticalDamage);
+        }
+    }
+
     private void ShootWeapon()
     {
-        GameObject bulletGb = Instantiate(bullet, Instant_Reference.getRightHandPosition(), Quaternion.identity);
-        if (bulletGb.GetComponent<Object_Motion>() != null)
+        if (shootableWeapon.BulletMode == Shootable_Object.BulletType.hitscan)
         {
+            DetectHitscanHit();
+        }
+
+        else
+        {
+            GameObject bulletGb = Instantiate(bullet, Instant_Reference.getRightHandPosition(), Quaternion.identity);
             bulletGb.GetComponent<Object_Motion>().setFlight(
-                        shootableWeapon.ShootableForce, shootableWeapon.ShootableDamage, shootableWeapon.ShootableBlastRange,
+                        shootableWeapon.ShootableForce, shootableWeapon.ShootableDamage, shootableWeapon.ShootableCriticalDamage, shootableWeapon.ShootableBlastRange,
                         heldWeapon.GetComponent<Weapon_Data>().getShootOrigin(),
                         CalculateBurst(
                             Instant_Reference.getRightHandToHitRay(shootableWeapon.ShootableForce).origin,
                             Instant_Reference.getRightHandToHitRay(shootableWeapon.ShootableForce).direction,
                             shootableWeapon.ShootableForce, Instant_Reference.UIController.GetComponent<Screen_Interface>().GetCrosshairBurst()),
                          shootableWeapon.HitParticle,
-                        shootableWeapon.ShootableAttributes.ShootableAttributeList, shootableWeapon.ShootableAttributes.ShootableAttributeValues,
                         Instant_Reference.GetPlayerLayermask(),
                         bulletMode.ToString(), Instant_Reference.FixArcSine(PlayerAngle()), shootableWeapon.ShootableTime);
+
         }
     }
 
@@ -131,9 +148,11 @@ public class Shootable : Weapon_Control
     }
     private void AttackBurst()
     {
-        if (burstController != null) { burstController.killTime(false); }
-        burst[0] = burst[0] < anteAttackBurst[0] + shootableWeapon.ShootableBurst.MaxAttackBurst 
-            ? burst[0] + shootableWeapon.ShootableBurst.AttackBurstIncrement[0] 
+        float b = Instant_Reference.UIController.GetComponent<Screen_Interface>().GetCrosshairBurst();
+
+        if (burstController != null) { burstController.killTime(true); }
+        burst[0] = b + shootableWeapon.ShootableBurst.AttackBurstIncrement[0] < anteAttackBurst[0] + shootableWeapon.ShootableBurst.MaxAttackBurst 
+            ? b + shootableWeapon.ShootableBurst.AttackBurstIncrement[0] 
             : anteAttackBurst[0] + shootableWeapon.ShootableBurst.MaxAttackBurst;
 
        UIController.GetComponent<Screen_Interface>().ChangeCrosshair(UnAttackBurst,
@@ -141,13 +160,13 @@ public class Shootable : Weapon_Control
     }
     private void UnAttackBurst()
     {
-        UIController.GetComponent<Screen_Interface>().ChangeCrosshair(RestoreBurst, anteAttackBurst[0],
-            shootableWeapon.ShootableBurst.UnAttackBurstSpeed, false);
+        float unAttackSpeed = Instant_Reference.UIController.GetComponent<Screen_Interface>().GetCrosshairBurst() / anteAttackBurst[0]
+            * shootableWeapon.ShootableBurst.UnAttackBurstSpeed;
+
+        UIController.GetComponent<Screen_Interface>().ChangeCrosshair(() => burst = anteAttackBurst, anteAttackBurst[0],
+            unAttackSpeed, false);
     }
-    private void RestoreBurst()
-    {
-        Event_Controller.TimedEvent(() => burst = anteAttackBurst, null, shootableWeapon.ShootableBurst.BurstRestorationSpeed, out burstController);
-    }
+
     private void ChangeCrossHair()
     { 
         anteAttackBurst = burst;
@@ -163,7 +182,7 @@ public class Shootable : Weapon_Control
         Event_Controller.removeIdleStream(IdleBurst);
         Event_Controller.removeStateChangeStream(ChangeCrossHair);
         Event_Controller.attackEvent -= FireWeapon;
-        UIController.GetComponent<Screen_Interface>().DeleteCrossHair();
+        UIController.GetComponent<Screen_Interface>().DeleteCrossHair(); // must call here because enable/disable weapon functions in same method
     }
 
     private void Update()

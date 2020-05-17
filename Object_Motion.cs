@@ -5,13 +5,15 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class Object_Motion : MonoBehaviour
 {
+    public GameObject hitObject;
+
     private string flightMode;
     private float flightForce;
-    private float weaponDamage;
+    private float weaponDamage, weaponCrit;
     private float blastRadius;
     private string[] layer;
     private float flightTime, lerpPct;
-    private Vector3 startPoint, finalPoint, hitPoint, newAngle;
+    private Vector3 startPoint, finalPoint, hitPoint, newAngle, hitNormal;
 
     private delegate void FlightDelegate();
     private FlightDelegate flight;
@@ -21,15 +23,15 @@ public class Object_Motion : MonoBehaviour
     private float instantPos;
     private float runningTime = 0;
     private float cumulativeDistance = 0;
+    private float positionFrame = 0;
     private float kAngle;
 
-    private const float kPositionFrame = .01f;
-    private const float verticalAccerlation = 20f;
-    private const float kDetectionDivisor = 10;
+    public static float verticalAccerlation = 10f;
+    private const float kDetectionDivisor = 15;
+    private const float kMaxPositionFrame = 2;
+    private const float kMaxInelasticFactor = .5f;
 
     private ParticleSystem deathParticle;
-    private char[] attributeL;
-    private Vector4[] attributeV;
 
     private void OnEnable()
     {
@@ -51,17 +53,17 @@ public class Object_Motion : MonoBehaviour
     /// <param name="flightMode">"quadratic" is quadratic. "linear" is linear</param>
     /// <param name="angle">Optional: angle to shoot in quadratic motion</param>
     /// <param name="_time">Optional: time to complete linear interpolation</param>
-    public void setFlight(float _force, float damage, float blastRange, Vector3 startingPoint, Vector3 _finalPoint,
-        ParticleSystem hitParticle, char[] attributeList, Vector4[] attributeValue, string[] _layer, string flightMode, float angle = 0, float _time = 0) {
+    public void setFlight(float _force, float damage, float critDamage, float blastRange, Vector3 startingPoint, Vector3 _finalPoint,
+        ParticleSystem hitParticle, string[] _layer, string flightMode, float angle = 0, float _time = 0) {
         #region instantiating datas
         flightTime = _time;
         flightForce = _force;
         weaponDamage = damage;
+        weaponCrit = critDamage;
         blastRadius = blastRange;
         deathParticle = hitParticle;
         layer = _layer;
-        attributeL = attributeList;
-        attributeV = attributeValue;
+        positionFrame = Time.deltaTime * (kMaxPositionFrame - flightTime);
         #endregion
         startPoint = startingPoint;
         finalPoint = _finalPoint;
@@ -87,8 +89,9 @@ public class Object_Motion : MonoBehaviour
     // calculate vacuum flight path
     void QuadraticFlight()
     {
+        float t = Mathf.Abs(2 * Mathf.Sin(kAngle) * flightForce / verticalAccerlation);
         transform.position = GetQuadraticCoordinates(runningTime);
-        runningTime += kPositionFrame;
+        runningTime += positionFrame;
     }
 
     private Vector3 GetQuadraticCoordinates(float rt)
@@ -100,57 +103,48 @@ public class Object_Motion : MonoBehaviour
 
     private void LinearReset()
     {
-        RaycastHit t;
-        Vector3 c = finalPoint;
-        Vector3 d = startPoint;
-
-        if (Physics.Raycast(new Ray(startPoint, finalPoint - startPoint), out t, 100, LayerMask.GetMask(layer)))
-        {
-            throwableXZAxis = new Ray(transform.position, Quaternion.AngleAxis(Vector3.Angle(t.normal, d - c), Vector3.Cross(d - c, t.normal)) * t.normal);
-        }
+        throwableXZAxis = new Ray(transform.position, Quaternion.AngleAxis(Vector3.Angle(hitNormal, startPoint - finalPoint), 
+            Vector3.Cross(startPoint - finalPoint, hitNormal)) * hitNormal);
     }
 
     private void QuadraticReset()
     {
-        RaycastHit h;
-        Vector3 a = GetQuadraticCoordinates(runningTime + kPositionFrame);
-        Vector3 b = GetQuadraticCoordinates(runningTime - kPositionFrame);
+        Vector3 b = GetQuadraticCoordinates(runningTime - 4 * Time.deltaTime);
         instantPos = transform.position.y;
-        if (Physics.Raycast(new Ray(b, a - b), out h, LayerMask.GetMask(layer)))
-        {
-            newAngle = Quaternion.AngleAxis(Vector3.Angle(h.normal, b - a), Vector3.Cross(b - a, h.normal)) * h.normal;
-            kAngle = Vector3.Angle(newAngle, new Vector3(newAngle.x, 0, newAngle.z));
-            print(kAngle);
-        }
+        newAngle = Quaternion.AngleAxis(Vector3.Angle(hitNormal, b - transform.position), Vector3.Cross(b - transform.position, hitNormal)) * hitNormal;
+        kAngle = Vector3.Angle(newAngle, new Vector3(newAngle.x, 0, newAngle.z));
+        float inelasticDepletion = Vector3.Angle(hitNormal, b - transform.position) / 100;
+        flightForce *= inelasticDepletion > kMaxInelasticFactor ? inelasticDepletion : kMaxInelasticFactor; // reduction of force due to inelastic collisions
+
     }
 
-    public void RestartFlight( float powerReduction, float bounceRandomness)
+    public void RestartFlight(float powerReduction, float bounceRandomness)
     {
-        flightReset.Invoke();
 
-        flightForce -= powerReduction;
+        flightReset?.Invoke();
+        flightForce -= powerReduction; // reduction of force due to friction
         finalPoint = Weapon_Control.CalculateBurst(startPoint, throwableXZAxis.GetPoint(flightForce - powerReduction) - startPoint, flightForce, bounceRandomness);
         throwableXZAxis = new Ray(transform.position, Weapon_Control.CalculateBurst(
-            transform.position, newAngle, flightForce, bounceRandomness) - transform.position);
+            transform.position, new Vector3(newAngle.x, 0 ,newAngle.z), flightForce, bounceRandomness) - transform.position);
         runningTime = 0;
     }
 
     public void endFlight()
     {
-        Instantiate(deathParticle, hitPoint, Quaternion.identity);
+        Instantiate(deathParticle, transform.position, Quaternion.identity);
         Destroy(gameObject);
     }
 
     private void DetectQuadraticHit()
     {
-        Vector3 v = GetQuadraticCoordinates(runningTime - 5* kPositionFrame);
+        Vector3 v = GetQuadraticCoordinates(runningTime - 2* Time.deltaTime);
         RaycastHit h;
 
-        Debug.DrawRay(v, (transform.position-v) );
         if (Physics.Raycast(new Ray(v, transform.position-v), out h, flightForce / kDetectionDivisor, LayerMask.GetMask(layer)))
         {
+            hitNormal = h.normal;
             hitPoint = h.point;
-            Instant_Reference.playerRightHand.GetComponent<Weapon_Control>().AddAttributes(h.transform.gameObject, attributeL, attributeV, weaponDamage, gameObject);
+            OnHit(h);
         }
     }
 
@@ -163,17 +157,39 @@ public class Object_Motion : MonoBehaviour
         {
             if ((h.point - transform.position).magnitude < flightForce / flightTime / kDetectionDivisor)
             {
-                Instant_Reference.playerRightHand.GetComponent<Weapon_Control>().AddAttributes(h.transform.gameObject, attributeL, attributeV, weaponDamage, gameObject);
+                hitNormal = h.normal;
                 startPoint = h.point;
                 hitPoint = h.point;
+                OnHit(h);
             }
         }
     }
 
+    private void OnHit(RaycastHit h) // get all object hit from given point. Customized to fit blastradius
+    {
+        if (blastRadius == 0)
+        {
+            Weapon_Control.OnObjectHit(h.transform.gameObject, gameObject, weaponDamage, weaponCrit);
+        }
+        else
+        {
+            Collider[] hitObjects = Physics.OverlapSphere(h.point, blastRadius);
+            List<GameObject> objectList = new List<GameObject>();
+            foreach (Collider c in hitObjects)
+            {
+                if (!objectList.Contains(Weapon_Control.GetHealthBaseObject(c.gameObject))){ objectList.Add(Weapon_Control.GetHealthBaseObject(c.gameObject)); }
+            }
+            foreach (GameObject gb in objectList)
+            {
+                Weapon_Control.OnObjectHit(gb, gameObject, weaponDamage, weaponCrit);
+            }
+        }
+    }
     // Update is called once per frame
     void FixedUpdate()
     {
         //Flight delegate containing desired flight type
         flight?.Invoke();
+        Debug.DrawRay(throwableXZAxis.origin, throwableXZAxis.direction);
     }
 }

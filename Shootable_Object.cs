@@ -15,6 +15,7 @@ public class Shootable_Object : ScriptableObject
     }
     public BulletType BulletMode;
     public float ShootableDamage;
+    public float ShootableCriticalDamage;
     public float ShootableForce;
     public float ShootableTime;
     public float ShootableFireRate;

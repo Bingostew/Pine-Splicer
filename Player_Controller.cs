@@ -92,7 +92,7 @@ public class Player_Controller : MonoBehaviour, ObjectHealth
     {
         int slot = 0;
         int.TryParse(Input.inputString, out slot);
-        if(slot < 6 && slot > 0) { Instant_Reference.UIController.GetComponent<Screen_Interface>().SwitchWeaponSlot(slot); }
+        if (slot < 6 && slot > 0) { Instant_Reference.UIController.GetComponent<Screen_Interface>().SwitchWeaponSlot(slot); slot = 0; print("y"); }
     }
 
     #region jumpingTriggers

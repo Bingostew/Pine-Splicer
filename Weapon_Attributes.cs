@@ -1,187 +1,118 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
-using UnityEngine.XR;
 
-namespace StatEffect
+public class AttributeInstance : MonoBehaviour
 {
-    public class AttributeInstance
+    protected delegate void SpecialAttribute(GameObject hitGb);
+    protected delegate void DamageAttribute(GameObject hitGb, float damage);
+    protected static Dictionary<GameObject, List<SpecialAttribute>> specialAttributeStream = new Dictionary<GameObject, List<SpecialAttribute>>();
+    protected static Dictionary<GameObject, DamageAttribute> damageAttributeStream = new Dictionary<GameObject, DamageAttribute>();
+    public static Dictionary<GameObject, HealthModifier> linearHealthStream = new Dictionary<GameObject, HealthModifier>();
+    public static Dictionary<GameObject, TimeBased> speedStream = new Dictionary<GameObject, TimeBased>();
+    protected static bool hasObjectMotion = false;
+
+
+    protected static void AddAttribute(GameObject gb, SpecialAttribute c)
     {
-        protected static Dictionary<GameObject, LinearHealthModifier> linearHealthStream = new Dictionary<GameObject, LinearHealthModifier>();
-        protected static Dictionary<GameObject, MoveSpeedModifier> speedStream = new Dictionary<GameObject, MoveSpeedModifier>();
-
-
-        public static void beginModifier(float value1, float value2, float damage, char modifier, GameObject gb, GameObject gbOrigin = null, float value3=0, float value4 = 0)
-        { 
-            switch (modifier) {
-                case 's':
-                    if (speedStream.ContainsKey(gb)) { speedStream[gb].RestartEvent(); }
-                    else
-                    {
-                        MoveSpeedModifier s = new MoveSpeedModifier(value1, value2, damage);
-                        speedStream.Add(gb, s);
-                        s.startModifier(gb);
-                    }
-                    break;
-                case 'l':
-                    if (linearHealthStream.ContainsKey(gb)) { linearHealthStream[gb].RestartEvent(); }
-                    else
-                    {
-                        LinearHealthModifier l = new LinearHealthModifier(value1, value2, value3, damage);
-                        linearHealthStream.Add(gb, l);
-                        l.startModifier(gb);
-                    }
-                    break;
-                case 'b':
-                    BounceShotModifier b = new BounceShotModifier();
-                    b.startModifier(gbOrigin, gb, value1, value2, damage);
-                    break;
-                case 'g':
-                    ShotgunModifier g = new ShotgunModifier();
-                    g.startModifier(gb, gbOrigin, damage);
-                    break;
-                case 'd':
-                    ContactDetonatorModifier d = new ContactDetonatorModifier();
-                    d.startModifier(gbOrigin);
-                    break;
-                case 'p':
-                    PlayerHealthModifier p = new PlayerHealthModifier();
-                    p.startModifier(gb, value1);
-                    break;
-            }
+        if (specialAttributeStream.ContainsKey(gb))
+        {
+            specialAttributeStream[gb].Add(c);
+        }
+        else
+        {
+            specialAttributeStream.Add(gb, new List<SpecialAttribute>());
+            specialAttributeStream[gb].Add(c);
         }
     }
-    
-    // Each attribute class contains: 
-    // - Method to handle change- either through modifiers or directly change static variables
-    // - Event handling: add/ subtract event
 
-    public class MoveSpeedModifier : AttributeInstance
+    protected static void AddSpeedStream(GameObject gb, TimeBased t)
     {
-        private float slownessLength = 0;
-        private float slownessPercent = 0;
-        private float metaDamage = 0;
-        private GameObject modifiedGb;
-        private TimeBased t;
-
-        public MoveSpeedModifier(float slownessLth, float slownessPct, float _metaDamage)
+        if (speedStream.ContainsKey(gb))
         {
-            slownessPercent = slownessPct;
-            slownessLength = slownessLth;
-            metaDamage = _metaDamage;
+            speedStream[gb].restartTime();
         }
-
-        public void startModifier(GameObject gb)
+        else
         {
-            Health_Base.changeEntityHeath(gb, metaDamage, false);
-            modifiedGb = gb;
-            switch (gb.tag)
+            speedStream.Add(gb, t);
+        }
+    }
+
+    protected static void AddDamageAttribute(GameObject gb, DamageAttribute d)
+    {
+        if (!damageAttributeStream.ContainsKey(gb))
+            damageAttributeStream.Add(gb, d);
+    }
+
+    public static void AddHealthStream(GameObject gb, HealthModifier h)
+    {
+        if (linearHealthStream.ContainsKey(gb)) { linearHealthStream[gb].RestartEvent(); }
+        else
+        {
+            linearHealthStream.Add(gb, h);
+        }
+    }
+
+    public static void callAttribute(GameObject hitGb, GameObject contactGb, float damage)
+    {
+        if (specialAttributeStream.ContainsKey(contactGb))
+        {
+            foreach (SpecialAttribute c in specialAttributeStream[contactGb])
             {
-                case "Enemy":
-                        modifiedGb.GetComponent<Enemy_Controller>().enemySpeedModifier *= slownessPercent;
-                    break;
-                case "Player":
-                    Player_Controller.speedModifier *= slownessPercent;
-                    break;
-            }
-            Event_Controller.TimedEvent(resetModifier, null, slownessLength, out t);
-        }
-
-        private void resetModifier()
-        {
-            if (modifiedGb != null)
-            {
-                switch (modifiedGb.tag)
-                {
-                    case "Enemy":
-                        modifiedGb.GetComponent<Enemy_Controller>().enemySpeedModifier = 1;
-                        break;
-                    case "Player":
-                        Player_Controller.speedModifier = 1;
-                        break;
-                }
-            }
-            speedStream.Remove(modifiedGb);
-        }
-
-        public void RestartEvent() { t.restartTime(); }
-    }
-   
-    public class LinearHealthModifier : AttributeInstance
-    {
-        private float depletion, rate, duration;
-        private float runTime, runCounter;
-        private float metaDamage;
-        private GameObject modifiedGb;
-        private TimeBased t;
-
-        public LinearHealthModifier( float time, float damage, float timeIncrement, float _metaDamage)
-        {
-            runCounter = timeIncrement;
-            rate = timeIncrement;
-            depletion = damage;
-            duration = time;
-            metaDamage = _metaDamage;
-        }
-        public void startModifier(GameObject gb)
-        {
-            Health_Base.changeEntityHeath(gb, metaDamage, false);
-            modifiedGb = gb;
-            Event_Controller.TimedEvent(Reset, DepleteHealth, duration, out t);
-        }
-        public void RestartEvent()
-        {
-            t.restartTime();
-        }
-        private void DepleteHealth()
-        {
-            runTime += Time.deltaTime;
-            if (runTime > runCounter)
-            {
-                runCounter += rate;
-                Health_Base.changeEntityHeath(modifiedGb, depletion, false);
+                c?.Invoke(hitGb);
             }
         }
-        private void Reset()
+        damageAttributeStream[contactGb]?.Invoke(hitGb, damage);
+    }
+}
+
+
+public class LinearHealthModifier
+{
+    float damage, rate, duration, runTime, runCounter;
+    GameObject hitGb;
+    Vector3 hitPos;
+    TimeBased t;
+
+    public void linearHealthChange(GameObject _hitGb, Vector3 _hitPos, float _damage, float _rate, float _duration)
+    {
+        damage = _damage;
+        rate = _rate;
+        duration = _duration;
+        hitGb = _hitGb;
+        hitPos = _hitPos;
+        runCounter = rate;
+        Event_Controller.TimedEvent(() => AttributeInstance.linearHealthStream.Remove(_hitGb), DepleteHealth, duration, out t);
+    }
+
+    private void DepleteHealth()
+    {
+        if(hitGb == null)
         {
-            linearHealthStream.Remove(modifiedGb);
+            t.killTime(true);
+        }
+        runTime += Time.deltaTime;
+        if (runTime > runCounter)
+        {
+            runCounter += rate;
+            Health_Base.changeEntityHeath(hitGb, hitPos, damage, false, Health_Base.DamageType.EnemyNormal);
         }
     }
 
-    public class BounceShotModifier : AttributeInstance
+    public void RestartEvent()
     {
-        public void startModifier(GameObject gbOrigin, GameObject gb,float power, float randomBounce, float metaDamage)
-        {
-            Health_Base.changeEntityHeath(gb, metaDamage, false);
-            gbOrigin.GetComponent<Object_Motion>().RestartFlight( power, randomBounce);
-        }
+        t.restartTime();
     }
+}
 
-    public class ShotgunModifier : AttributeInstance
-    {
-        public void startModifier(GameObject gb, GameObject gbOrigin, float metaDamage)
-        {
-            Health_Base.changeEntityHeath(gb, metaDamage, true);
-        }
-    }
 
-    public class ContactDetonatorModifier : AttributeInstance
+public class PlayerHealthModifier : AttributeInstance
+{
+    public void startModifier(GameObject gb, GameObject gbOrigin, float healingAmount)
     {
-        public void startModifier(GameObject gbOrigin)
+        if (gb.layer == 9)
         {
-            gbOrigin.GetComponent<Object_Motion>().endFlight();
-        }
-    }
-
-    public class PlayerHealthModifier : AttributeInstance
-    {
-        public void startModifier(GameObject gb, float healingAmount)
-        {
-            if (gb.layer == 9)
-            {
-                Health_Base.changeEntityHeath(Instant_Reference.playerReference, -healingAmount, false);
-            }
+            //Health_Base.changeEntityHeath(Instant_Reference.playerReference, gbOrigin.transform.position, -healingAmount, false);
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using StatEffect;
 
 public class Weapon_Control : MonoBehaviour
 {
@@ -12,7 +11,7 @@ public class Weapon_Control : MonoBehaviour
     protected static Weapon_Data heldWeaponData;
 
     protected static int weaponSlot ;
-    private static int kBurstDivisor = 50;
+    private static int kBurstDivisor = 30;
 
     void OnEnable()
     {
@@ -53,20 +52,35 @@ public class Weapon_Control : MonoBehaviour
         }
     }
 
+    public static void OnObjectHit(GameObject gb, GameObject gbOrigin, float weaponDamage, float weaponCrit)
+    {
+        if (gb.layer == 12)
+        {
+            AttributeInstance.callAttribute(gb, gbOrigin, weaponCrit);
+        }
+        else 
+        {
+            AttributeInstance.callAttribute(gb, gbOrigin, weaponDamage);
+        }
+    }
+
+    public static GameObject GetHealthBaseObject(GameObject gb)
+    {
+        GameObject g = gb.layer == 12 ? gb.transform.parent.gameObject : gb;
+        return g;
+    }
+
+    public static Health_Base.DamageType GetDamageType(GameObject gb)
+    {
+        Health_Base.DamageType d = gb.layer == 12 ? Health_Base.DamageType.EnemyHead : gb.layer == 9 ? Health_Base.DamageType.EnemyNormal : Health_Base.DamageType.none;
+        return d;
+    }
 
     public static float PlayerAngle()
     {
         float angle = Vector3.Angle(Instant_Reference.getPlayerStraightRay().direction, Instant_Reference.getPlayerCamStraightRay().direction);
         if (Instant_Reference.getPlayerCamStraightRay().direction.y < 0) { angle *= -1; }
         return angle;
-    }
-
-    public void AddAttributes(GameObject gb, char[] attributeList, Vector4[] attributeValues, float weaponDamage, GameObject gbOrigin = null)
-    { 
-        for (int i = 0; i < attributeList.Length; i++)
-        {
-            AttributeInstance.beginModifier(attributeValues[i].x, attributeValues[i].y, weaponDamage, attributeList[i], gb, gbOrigin, attributeValues[i].z, attributeValues[i].w);
-        }
     }
 
     public static Vector3 CalculateBurst(Vector3 pathOrigin, Vector3 pathDirection, float rayLength, float burst)

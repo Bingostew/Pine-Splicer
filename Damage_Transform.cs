@@ -8,10 +8,12 @@ public class Damage_Transform : MonoBehaviour
     private Vector3 position;
     private Transform damageText;
 
-    public void SetPosition(Vector3 targetPos, float text)
+    public void SetPosition(Vector3 targetPos, float text, Color c)
     {
         damageText = transform.GetChild(0);
-        damageText.GetComponent<TextMeshProUGUI>().text = text.ToString();
+        TextMeshProUGUI t = damageText.GetComponent<TextMeshProUGUI>();
+        t.text = text.ToString();
+        t.faceColor = c;
         position = targetPos;
     }
     // Update is called once per frame

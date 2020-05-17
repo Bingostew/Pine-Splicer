@@ -29,7 +29,7 @@ public class Instant_Reference : MonoBehaviour
 
     public static string[] GetPlayerLayermask()
     {
-        return new string[] { "Terrain", "Entity" };
+        return new string[] { "Entity", "Terrain", "Crit" };
     }
 
     public static Ray getPlayerCamStraightRay()
